@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Your Profile</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-6">
+    <a href="{{ url_for('main.base') }}" class="bg-indigo-500 text-white px-4 py-2 rounded hover:bg-indigo-600 justify-center">
+        Go back to Home
+      </a>
+    
+  <div class="max-w-4xl mx-auto">
+    <h1 class="text-3xl font-bold mb-6">👤 Your Profile</h1>
+    
+    <!-- Personal Info -->
+    <form method="POST" class="bg-white p-6 rounded shadow mb-6 grid gap-4">
+      <h2 class="text-xl font-semibold mb-2">Edit Personal Info</h2>
+      <input name="full_name" value="{{ current_user.full_name }}" class="p-2 border rounded" placeholder="Full Name">
+      <input name="birthdate" value="{{ current_user.birthdate }}" class="p-2 border rounded" placeholder="Birthdate">
+      <input name="age" value="{{ current_user.age }}" class="p-2 border rounded" placeholder="Age">
+      <input name="address" value="{{ current_user.address }}" class="p-2 border rounded" placeholder="Address">
+      <input name="contact" value="{{ current_user.contact }}" class="p-2 border rounded" placeholder="Contact Number">
+      <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-fit">Update</button>
+    </form>
+
+    <!-- Active Bookings -->
+    <div class="bg-white p-6 rounded shadow mb-6">
+      <h2 class="text-xl font-semibold mb-4">📅 Current Bookings</h2>
+      {% if active_bookings %}
+        <ul class="space-y-4">
+          {% for b in active_bookings %}
+          <li class="border p-4 rounded flex justify-between items-center">
+            <div>
+              <p><strong>Service:</strong> {{ b.service }}</p>
+              <p><strong>Date:</strong> {{ b.date }} | <strong>Time:</strong> {{ b.time }}</p>
+              <p><strong>Status:</strong> <span class="text-yellow-600">{{ b.status }}</span></p>
+            </div>
+            {% if b.status != 'paid' %}
+            <a href="{{ url_for('main.receipt', order_code=b.order_code) }}"
+               class="text-blue-600 hover:underline">Download Receipt</a>
+            {% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="text-gray-500">No active bookings.</p>
+      {% endif %}
+    </div>
+
+    <!-- Booking History -->
+    <div class="bg-white p-6 rounded shadow">
+      <h2 class="text-xl font-semibold mb-4">📜 Booking History</h2>
+      {% if history %}
+        <ul class="space-y-4">
+          {% for b in history %}
+          <li class="border p-4 rounded">
+            <p><strong>Service:</strong> {{ b.service }}</p>
+            <p><strong>Date:</strong> {{ b.date }} | <strong>Time:</strong> {{ b.time }}</p>
+            <p><strong>Status:</strong> <span class="text-green-600">{{ b.status }}</span></p>
+          </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="text-gray-500">No past bookings yet.</p>
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>

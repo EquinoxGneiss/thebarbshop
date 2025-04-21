@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Book a Service - The Barbshop</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen px-6 py-10 flex flex-col items-center">
+
+  <h1 class="text-3xl font-bold text-gray-800 mb-10">Book a Service</h1>
+
+  <div class="flex flex-col md:flex-row gap-10 w-full max-w-5xl justify-center items-start">
+
+    <!-- Booking Form -->
+    <form method="POST" class="w-full md:w-1/2 bg-white p-6 rounded shadow">
+      <h2 class="text-2xl font-bold mb-4">Book a Service</h2>
+
+      <label class="block mb-2 font-semibold">Service</label>
+      <input 
+        type="text" 
+        name="service" 
+        class="w-full mb-4 p-2 border rounded bg-gray-100" 
+        value="{{ selected_service.name if selected_service else '' }}" 
+        readonly>
+
+      <label class="block mb-2 font-semibold">Date</label>
+      <input type="date" id="date" name="date" class="w-full mb-4 p-2 border rounded" required>
+
+      <label class="block mb-2 font-semibold">Time</label>
+      <input type="time" id="time" name="time" class="w-full mb-4 p-2 border rounded" required>
+
+      <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+        Confirm Booking
+      </button>
+    </form>
+
+    <!-- Summary Panel -->
+    <div class="w-full md:w-1/2 bg-white p-6 rounded shadow">
+      <h2 class="text-xl font-bold mb-4">Booking Summary</h2>
+      <p><strong>Service:</strong> <span id="summary-service">{{ selected_service.name }}</span></p>
+      <p><strong>Price:</strong> ₱{{ '%.2f' | format(selected_service.price) if selected_service else '–' }}</p>
+      <p><strong>Date:</strong> <span id="summary-date">–</span></p>
+      <p><strong>Time:</strong> <span id="summary-time">–</span></p>
+      <p><strong>Availability:</strong> <span class="text-green-600">Available</span></p>
+    </div>
+
+  </div>
+
+  <a href="{{ url_for('main.base') }}" class="mt-10 text-blue-500 hover:underline">← Back to Dashboard</a>
+
+  <!-- JS -->
+  <script>
+    const dateInput = document.getElementById("date");
+    const timeInput = document.getElementById("time");
+    const today = new Date().toISOString().split("T")[0];
+    dateInput.min = today;
+
+    function updateTimeLimit() {
+      const selectedDate = dateInput.value;
+      const now = new Date();
+
+      if (selectedDate === today) {
+        const hours = now.getHours().toString().padStart(2, '0');
+        const minutes = now.getMinutes().toString().padStart(2, '0');
+        timeInput.min = `${hours}:${minutes}`;
+      } else {
+        timeInput.min = "00:00";
+      }
+    }
+
+    function updateSummary() {
+      document.getElementById('summary-date').textContent = dateInput.value || '–';
+      document.getElementById('summary-time').textContent = timeInput.value || '–';
+    }
+
+    dateInput.addEventListener('change', () => {
+      updateTimeLimit();
+      updateSummary();
+    });
+
+    timeInput.addEventListener('change', updateSummary);
+
+    updateTimeLimit();
+    updateSummary();
+  </script>
+
+</body>
+</html>

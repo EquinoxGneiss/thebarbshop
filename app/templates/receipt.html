@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Receipt {{ order.order_code }}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+</head>
+<body class="bg-gray-100 p-8">
+
+  <!-- Action Buttons -->
+  <div class="max-w-lg mx-auto mb-6 flex justify-center gap-4">
+    <button onclick="window.print()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+      🖨️ Print Receipt
+    </button>
+    <button onclick="downloadAsImage()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+      📸 Download Image
+    </button>
+  </div>
+
+  <!-- Receipt Section -->
+  <div id="receipt-area" class="bg-white p-6 rounded shadow max-w-lg mx-auto">
+    <h1 class="text-2xl font-bold mb-4">🧾 Receipt</h1>
+    <p><strong>Order Code:</strong> {{ order.order_code }}</p>
+    <p><strong>Date:</strong> {{ order.timestamp.strftime('%Y-%m-%d %I:%M %p') }}</p>
+    <hr class="my-4">
+
+    <ul class="space-y-2">
+      {% for item in order.items %}
+      <li class="flex justify-between">
+        <span>{{ item.product.name }} x{{ item.quantity }}</span>
+        <span>₱{{ '%.2f' | format(item.subtotal) }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+
+    <hr class="my-4">
+    <p class="text-right text-lg font-bold">Total: ₱{{ '%.2f' | format(order.total) }}</p>
+
+    <div class="mt-4 flex justify-center">
+      <img src="{{ url_for('static', filename='barcodes/' + order.order_code + '.png') }}" alt="Barcode">
+    </div>
+  </div>
+
+  <!-- Script for download -->
+  <script>
+    function downloadAsImage() {
+      const receipt = document.getElementById('receipt-area');
+      html2canvas(receipt).then(canvas => {
+        const link = document.createElement('a');
+        link.download = 'receipt_{{ order.order_code }}.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      });
+    }
+  </script>
+
+</body>
+</html>
