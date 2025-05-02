@@ -5,15 +5,24 @@
   <title>Admin Panel - The Barbshop</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 min-h-screen p-8">
+
+{% include 'navbar.html' %}
+
+
+<!--  <body class="bg-gray-100 min-h-screen p-8">
   <a href="{{ url_for('main.base') }}" class="bg-indigo-500 text-white px-4 py-2 rounded hover:bg-indigo-600 justify-center ">
     Back to Dashboard
-  </a>
+  </a>--> 
   <h1 class="text-3xl font-bold text-gray-800 mb-6 mt-6">🧾 Admin Dashboard</h1>
 
   <!-- Booking List -->
   <div class="bg-white p-6 rounded-lg shadow mb-12">
-    <h2 class="text-xl font-bold mb-4">📅 All Bookings</h2>
+    <h2 class="text-xl font-bold mb-4">📅 All Bookings <a href="{{ url_for('main.bookings') }}">
+      <button class="bg-blue-600 text-white px-2 py-2 rounded hover:bg-blue-700">
+        Manage
+      </button>
+    </a></h2>
+    
     <table class="w-full table-auto text-left text-sm">
       <thead class="bg-gray-200">
         <tr>
@@ -27,12 +36,56 @@
         <tr class="border-t">
           <td class="p-2">{{ booking.user.full_name }}</td>
           <td class="p-2">{{ booking.service }}</td>
-          <td class="p-2">{{ booking.timestamp.strftime('%Y-%m-%d %I:%M %p') }}</td>
+          <td class="p-2">
+            {{ booking.timestamp.strftime('%Y-%m-%d %I:%M %p') }}
+            <span class="ml-2 px-2 py-1 rounded text-xs font-semibold 
+              {% if booking.status == 'accepted' %} bg-green-100 text-green-700
+              {% elif booking.status == 'pending' %} bg-yellow-100 text-yellow-700
+              {% elif booking.status == 'declined' %} bg-red-100 text-red-700
+              {% endif %}">
+              {{ booking.status.capitalize() }}
+            </span>
+          </td>          
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+
+  <!-- Product Purchases Section -->
+<div class="bg-white p-6 rounded shadow mt-6">
+  <h2 class="text-xl font-semibold mb-4">🧾 All Product Purchases</h2>
+  <table class="w-full table-auto text-left text-sm">
+    <thead class="bg-gray-200">
+      <tr>
+        <th class="p-2">Order Code</th>
+        <th class="p-2">Client</th>
+        <th class="p-2">Total</th>
+        <th class="p-2">Status</th>
+        <th class="p-2">Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for order in orders %}
+      <tr class="border-t">
+        <td class="p-2">{{ order.order_code }}</td>
+        <td class="p-2">{{ order.user.full_name }}</td>
+        <td class="p-2">₱{{ order.total }}</td>
+        <td class="p-2 capitalize">{{ order.status }}</td>
+        <td class="p-2">
+          {% if order.status != 'paid' %}
+            <a href="{{ url_for('main.payment', order_code=order.order_code) }}"
+               class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Manage</a>
+          {% else %}
+            <span class="text-green-600 font-semibold">Paid</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
 
   <!-- Add Product & Service Forms -->
    

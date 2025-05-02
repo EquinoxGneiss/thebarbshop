@@ -17,17 +17,15 @@
   <!-- Header -->
   <header class="bg-white shadow sticky top-0 z-50">
     <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-      <h1 class="text-xl font-semibold text-gray-800">The Barbshop</h1>
+      <h1 class="text-xl font-semibold text-gray-800"><a href="{{ url_for('main.admin_dashboard') }}">The Barbshop</a> </h1>
       <div class="flex items-center space-x-4">
-        {% if current_user.is_admin %}
-        <a href="{{ url_for('main.admin_dashboard') }}" class="bg-indigo-500 text-white px-4 py-2 rounded hover:bg-indigo-600">
-          Admin Panel
-        </a>
+        {% if current_user.role %}
+        <a href="{{ url_for('main.admin_dashboard') }}" class="text-gray-700 hover:text-blue-600 font-medium">Admin</a>
         {% endif %}
+        <a href="{{ url_for('main.profile') }}" class="text-gray-700 hover:text-blue-600 font-medium">Profile</a>
         <a href="{{ url_for('main.logout') }}" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
           Logout
         </a>
-        <a href="{{ url_for('main.profile') }}" class="text-sm text-gray-700 hover:underline">Profile</a>
       </div>
     </div>
   </header>
@@ -117,7 +115,11 @@
       document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
     }
 
-    let cart = {};
+    let cart = JSON.parse(localStorage.getItem('cart')) ||{};
+
+    function saveCart() {
+  localStorage.setItem('cart', JSON.stringify(cart));
+}
 
 function addToCart(id, name, price) {
   const qty = parseInt(document.getElementById('qty-' + id).value);
@@ -136,10 +138,27 @@ function renderCart() {
     const item = cart[id];
     const subtotal = item.price * item.qty;
     sum += subtotal;
-    list.innerHTML += `<li>${item.name} x${item.qty} - ₱${subtotal.toFixed(2)}</li>`;
+    const li = document.createElement('li');
+    li.className = "flex justify-between items-center border-b pb-2";
+    li.innerHTML = `
+      <div>
+        <p class="font-semibold">${item.name}</p>
+        <p class="text-xs">Qty: ${item.qty} × ₱${item.price.toFixed(2)} = ₱${subtotal.toFixed(2)}</p>
+      </div>
+      <button class="text-red-500 hover:text-red-700 text-sm" onclick="removeFromCart('${id}')">Remove</button>
+    `;
+    list.appendChild(li);
   }
   total.innerText = sum.toFixed(2);
+  saveCart();
 }
+
+function removeFromCart(id) {
+  delete cart[id];
+  renderCart();
+  saveCart();
+}
+
 
 function checkout() {
   if (Object.keys(cart).length === 0) {

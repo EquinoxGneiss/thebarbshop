@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Manage Bookings - The Barbshop</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+{% include 'navbar.html' %}
+<body class="bg-gray-100 min-h-screen p-8">
+  <a href="{{ url_for('main.admin_dashboard') }}" class="bg-indigo-500 text-white px-4 py-2 rounded hover:bg-indigo-600">
+    Back to Admin Dashboard
+  </a>
+
+  <h1 class="text-3xl font-bold text-gray-800 mb-6 mt-6">🧾 Manage Bookings</h1>
+
+  <div class="bg-white p-6 rounded shadow">
+    <table class="w-full table-auto text-left text-sm">
+      <thead class="bg-gray-200">
+        <tr>
+          <th class="p-2">Client</th>
+          <th class="p-2">Service</th>
+          <th class="p-2">Price</th>
+          <th class="p-2">Date & Time</th>
+          <th class="p-2">Status</th>
+          <th class="p-2">Barber</th>
+          <th class="p-2">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for booking in bookings %}
+        <tr class="border-t">
+          <td class="p-2">{{ booking.user.full_name }}</td>
+          <td class="p-2">{{ booking.service }}</td>
+          <td class="p-2">₱{{ '%.2f' | format(booking.price or 0) }}</td>
+          <td class="p-2">{{ booking.timestamp.strftime('%Y-%m-%d %I:%M %p') }}</td>
+          <td class="p-2 capitalize">{{ booking.status }}</td>
+          <td class="p-2">
+            {% if booking.barber %}
+              {{ booking.barber.full_name }}
+            {% else %}
+              <span class="text-gray-400 italic">Unassigned</span>
+            {% endif %}
+          </td>
+          <td class="p-2">
+            {% if booking.status == 'pending' %}
+            <form action="{{ url_for('main.update_booking_status') }}" method="POST" class="inline-block">
+              <input type="hidden" name="id" value="{{ booking.id }}">
+              <input type="hidden" name="status" value="accepted">
+              <button type="submit" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">Accept</button>
+            </form>
+            <form action="{{ url_for('main.update_booking_status') }}" method="POST" class="inline-block ml-2">
+              <input type="hidden" name="id" value="{{ booking.id }}">
+              <input type="hidden" name="status" value="declined">
+              <button type="submit" class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600">Decline</button>
+            </form>
+            {% else %}
+              <span class="text-gray-500 italic">Already {{ booking.status }}</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>

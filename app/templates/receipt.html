@@ -38,7 +38,7 @@
     <p class="text-right text-lg font-bold">Total: ₱{{ '%.2f' | format(order.total) }}</p>
 
     <div class="mt-4 flex justify-center">
-      <img src="{{ url_for('static', filename='barcodes/' + order.order_code + '.png') }}" alt="Barcode">
+      <img src="{{ url_for('static', filename='qr_codes/' + order_code + '.png') }}" alt="QR Code" class="w-256 h-256 mx-auto mt-4">
     </div>
   </div>
 
