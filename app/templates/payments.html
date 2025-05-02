@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Confirm Payment</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.7"></script>
+</head>
+{% include 'navbar.html' %}
+<body class="bg-gray-100 p-6">
+  <div class="max-w-3xl mx-auto bg-white p-6 rounded shadow">
+    <h1 class="text-2xl font-bold mb-4">🧾 Confirm Product Payment</h1>
+
+    <!-- QR Scanner -->
+    <div id="reader" style="width: 100%;" class="mb-4"></div>
+
+    <form method="POST" action="{{ url_for('main.confirm_payment') }}" class="space-y-4">
+      <input type="text" name="order_code" id="order_code" placeholder="Enter Order Code"
+             class="w-full p-2 border rounded" required>
+
+      <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 w-full">
+        Confirm Payment
+      </button>
+    </form>
+
+    <h2 class="text-xl font-semibold mt-8 mb-2">Unpaid Product Orders</h2>
+    <ul class="divide-y">
+      {% for order in unpaid_orders %}
+        <li class="py-2">
+          <p><strong>Order:</strong> {{ order.order_code }} | <strong>Client:</strong> {{ order.user.full_name }}</p>
+        </li>
+      {% else %}
+        <li class="text-gray-500">No unpaid orders.</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <script>
+    const scanner = new Html5QrcodeScanner("reader", {
+      fps: 10, qrbox: 250
+    });
+    scanner.render((decodedText) => {
+      document.getElementById("order_code").value = decodedText;
+      scanner.clear();
+    });
+  </script>
+</body>
+</html>

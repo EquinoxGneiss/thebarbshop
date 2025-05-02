@@ -20,7 +20,19 @@ class User(UserMixin, db.Model):
     role = db.Column(db.String(50))  # e.g. "Barber", "Receptionist"
     is_admin = db.Column(db.Boolean, default=False)
 
-    bookings = db.relationship('Booking', backref='user', lazy=True)
+    # Relationships
+    bookings = db.relationship(
+        'Booking',
+        back_populates='user',
+        foreign_keys='Booking.user_id',
+        lazy=True
+    )
+    assigned_bookings = db.relationship(
+        'Booking',
+        back_populates='barber',
+        foreign_keys='Booking.barber_id',
+        lazy=True
+    )
 
     def __repr__(self):
         return f'<User {self.full_name}>'
@@ -31,7 +43,7 @@ class User(UserMixin, db.Model):
 # =======================
 class Booking(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Client
     service = db.Column(db.String(100))
     date = db.Column(db.String(20))
     time = db.Column(db.String(20))
@@ -39,6 +51,20 @@ class Booking(db.Model):
     status = db.Column(db.String(20), default='pending')
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     payment_status = db.Column(db.String(20), default='unpaid')
+    price = db.Column(db.Float, nullable=True) 
+    barber_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+
+    # Relationships
+    user = db.relationship(
+        'User',
+        back_populates='bookings',
+        foreign_keys=[user_id]
+    )
+    barber = db.relationship(
+        'User',
+        back_populates='assigned_bookings',
+        foreign_keys=[barber_id]
+    )
 
     def __repr__(self):
         return f'<Booking {self.order_code} - {self.service}>'

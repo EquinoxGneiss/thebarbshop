@@ -65,40 +65,63 @@
       </thead>
       <tbody>
         {% for order in orders %}
-        <tr class="border-t">
-          <td class="p-2">{{ order.timestamp.strftime('%Y-%m-%d') }}</td>
-          <td class="p-2">{{ order.order_code }}</td>
-          <td class="p-2">{{ order.user.full_name }}</td>
-          <td class="p-2">₱{{ "%.2f"|format(order.total) }}</td>
-          <td class="p-2">{{ order.status }}</td>
-        </tr>
-        {% endfor %}
+<tr class="border-t">
+  <td class="p-2">{{ order.timestamp.strftime('%Y-%m-%d') }}</td>
+  <td class="p-2">{{ order.order_code }}</td>
+  <td class="p-2">{{ order.user.full_name }}</td>
+  <td class="p-2">₱{{ "%.2f"|format(order.total) }}</td>
+  <td class="p-2">{{ order.status }}</td>
+</tr>
+{% endfor %}
+{% for booking in bookings %}
+<tr class="border-t">
+  <td class="p-2">{{ booking.timestamp.strftime('%Y-%m-%d') }}</td>
+  <td class="p-2">{{ booking.order_code }}</td>
+  <td class="p-2">{{ booking.user.full_name }}</td>
+  <td class="p-2">₱{{ "%.2f"|format(booking.price or 0) }}</td>
+  <td class="p-2">accepted</td>
+</tr>
+{% endfor %}
+
       </tbody>
     </table>
   </div>
 
   <!-- Chart.js Script -->
   <!-- Inject labels and values as raw JSON -->
-<script id="labels-json" type="application/json">{{ labels | tojson }}</script>
-<script id="values-json" type="application/json">{{ values | tojson }}</script>
+  <script id="labels-json" type="application/json">{{ labels | tojson }}</script>
+<script id="order-values-json" type="application/json">{{ order_values | tojson }}</script>
+<script id="booking-values-json" type="application/json">{{ booking_values | tojson }}</script>
+
 
 <script>
   const labels = JSON.parse(document.getElementById('labels-json').textContent);
-  const values = JSON.parse(document.getElementById('values-json').textContent);
+  const orderData = JSON.parse(document.getElementById('order-values-json').textContent);
+  const bookingData = JSON.parse(document.getElementById('booking-values-json').textContent);
 
   const ctx = document.getElementById('salesChart').getContext('2d');
   const salesChart = new Chart(ctx, {
     type: 'line',
     data: {
       labels: labels,
-      datasets: [{
-        label: 'Daily Revenue (₱)',
-        data: values,
-        borderColor: 'rgb(59, 130, 246)',
-        backgroundColor: 'rgba(59, 130, 246, 0.2)',
-        fill: true,
-        tension: 0.3
-      }]
+      datasets: [
+        {
+          label: 'Product Orders (₱)',
+          data: orderData,
+          borderColor: 'rgb(59, 130, 246)',
+          backgroundColor: 'rgba(59, 130, 246, 0.2)',
+          fill: true,
+          tension: 0.3
+        },
+        {
+          label: 'Service Bookings (₱)',
+          data: bookingData,
+          borderColor: 'rgb(16, 185, 129)',
+          backgroundColor: 'rgba(16, 185, 129, 0.2)',
+          fill: true,
+          tension: 0.3
+        }
+      ]
     },
     options: {
       responsive: true,
@@ -108,12 +131,17 @@
       },
       scales: {
         y: {
-          beginAtZero: true
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: 'Revenue (₱)'
+          }
         }
       }
     }
   });
 </script>
+
 
 
 </body>

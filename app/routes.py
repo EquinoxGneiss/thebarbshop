@@ -6,7 +6,10 @@ from datetime import datetime, timedelta, date
 from . import db, login_manager
 from .models import Service, User, Booking, Product, Order, OrderItem
 import os, random, string, barcode
-from barcode.writer import ImageWriter
+import qrcode
+import io
+import base64
+from flask import render_template
 from sqlalchemy import func, cast, Date
 from flask import json
 
@@ -15,7 +18,7 @@ main = Blueprint('main', __name__)
 PRODUCT_UPLOAD_FOLDER = 'app/static/uploads/products'
 SERVICE_UPLOAD_FOLDER = 'app/static/uploads/services'
 BARCODE_FOLDER = 'app/static/barcodes'
-
+QR_FOLDER = os.path.join('app', 'static', 'qr_codes')
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -115,14 +118,15 @@ def book():
         # Generate unique order code
         order_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
 
-        # Save booking
+        # Save booking (now with price)
         new_booking = Booking(
             user_id=current_user.id,
             service=selected_service.name,
             date=date_str,
             time=time,
             order_code=order_code,
-            status='pending'
+            status='pending',
+            price=selected_service.price  # ✅ Store the service price
         )
         db.session.add(new_booking)
         db.session.commit()
@@ -146,11 +150,11 @@ def receipt(order_code):
     # Check if it's a product order
     order = Order.query.filter_by(order_code=order_code).first()
     if order:
-        return render_template('receipt.html', order=order)
+        return render_template('receipt.html', order=order, order_code=order_code)
 
     # Otherwise, it's a service booking
     booking = Booking.query.filter_by(order_code=order_code).first_or_404()
-    return render_template('service_receipt.html', order=booking)
+    return render_template('service_receipt.html', order=booking, order_code=order_code)
 
 
 # === Profile ===
@@ -164,32 +168,40 @@ def profile():
         current_user.address = request.form['address']
         current_user.contact = request.form['contact']
         db.session.commit()
-        flash("Profile updated successfully!")
-        return redirect(url_for('main.profile'))
+        flash("Profile updated.")
 
-    bookings = Booking.query.filter_by(user_id=current_user.id).order_by(Booking.date.desc()).all()
-    active = [b for b in bookings if b.status != 'paid']
-    history = [b for b in bookings if b.status == 'paid']
-    return render_template('profile.html', active_bookings=active, history=history)
+    # Bookings
+    active_bookings = Booking.query.filter_by(user_id=current_user.id).filter(Booking.status != 'completed').all()
+    history = Booking.query.filter_by(user_id=current_user.id, status='completed').all()
 
+    # Orders
+    pending_orders = Order.query.filter_by(user_id=current_user.id, status='pending').all()
+    completed_orders = Order.query.filter_by(user_id=current_user.id, status='paid').all()
+
+    return render_template('profile.html',
+                           active_bookings=active_bookings,
+                           history=history,
+                           pending_orders=pending_orders,
+                           completed_orders=completed_orders)
 
 # === Admin Dashboard ===
 @main.route('/admin/dashboard')
 @login_required
 def admin_dashboard():
-    if not current_user.is_admin:
+    if current_user.role not in ['Barber','Receptionist', 'Manager', 'Admin']:
         abort(403)
     bookings = Booking.query.order_by(Booking.timestamp.desc()).all()
+    orders = Order.query.order_by(Order.timestamp.desc()).all()
     products = Product.query.all()
     services = Service.query.all()
-    return render_template('admin_dashboard.html', products=products, bookings=bookings, services=services)
+    return render_template('admin_dashboard.html', products=products, bookings=bookings, services=services, orders=orders)
 
 
 # === Add Product (Admin) ===
 @main.route('/admin/add_product', methods=['POST'])
 @login_required
 def add_product():
-    if not current_user.is_admin:
+    if current_user.role not in ['Receptionist', 'Manager', 'Admin']:
         abort(403)
 
     data = request.form
@@ -217,7 +229,7 @@ def add_product():
 @main.route('/admin/edit_product/<int:product_id>', methods=['GET', 'POST'])
 @login_required
 def edit_product(product_id):
-    if not current_user.is_admin:
+    if current_user.role not in ['Receptionist', 'Manager', 'Admin']:
         abort(403)
     product = Product.query.get_or_404(product_id)
 
@@ -272,12 +284,14 @@ def checkout():
     order.total = total
     db.session.commit()
 
-    # generate barcode
-    code = barcode.get_barcode_class('code128')(order_code, writer=ImageWriter())
-    os.makedirs(BARCODE_FOLDER, exist_ok=True)
-    code.save(os.path.join(BARCODE_FOLDER, order_code))
+    # ✅ Generate QR code instead of barcode
+    os.makedirs(QR_FOLDER, exist_ok=True)
+    qr = qrcode.make(order_code)
+    qr_path = os.path.join(QR_FOLDER, f"{order_code}.png")
+    qr.save(qr_path)
 
     return jsonify({'success': True, 'order_code': order_code})
+
 
 @main.route('/service_receipt/<order_code>')
 @login_required
@@ -290,7 +304,7 @@ def service_receipt(order_code):
 @main.route('/admin/add_service', methods=['POST'])
 @login_required
 def add_service():
-    if not current_user.is_admin:
+    if current_user.role not in ['Receptionist', 'Manager', 'Admin']:
         abort(403)
 
     data = request.form
@@ -318,7 +332,7 @@ def add_service():
 @main.route('/admin/edit_service/<int:id>', methods=['GET', 'POST'])
 @login_required
 def edit_service(id):
-    if not current_user.is_admin:
+    if current_user.role not in ['Receptionist', 'Manager', 'Admin']:
         abort(403)
 
     service = Service.query.get_or_404(id)
@@ -345,7 +359,7 @@ def edit_service(id):
 @main.route('/admin/delete_service/<int:id>', methods=['POST'])
 @login_required
 def delete_service(id):
-    if not current_user.is_admin:
+    if current_user.role not in ['Receptionist', 'Manager', 'Admin']:
         abort(403)
 
     service = Service.query.get_or_404(id)
@@ -356,7 +370,7 @@ def delete_service(id):
 @main.route('/admin/delete_product/<int:product_id>', methods=['POST'])
 @login_required
 def delete_product(product_id):
-    if not current_user.is_admin:
+    if current_user.role not in ['Receptionist', 'Manager', 'Admin']:
         abort(403)
 
     product = Product.query.get_or_404(product_id)
@@ -375,7 +389,7 @@ def delete_product(product_id):
 @main.route('/bookings')
 @login_required
 def bookings():
-    if not current_user.is_admin:
+    if current_user.role not in ['Barber', 'Manager', 'Admin']:
         abort(403)
     bookings = Booking.query.order_by(Booking.timestamp.desc()).all()
     return render_template('bookings.html', bookings=bookings)
@@ -413,29 +427,27 @@ def update_booking():
 @main.route('/update-booking-status', methods=['POST'])
 @login_required
 def update_booking_status():
-    if not current_user.is_admin:
+    if current_user.role not in ['Barber', 'Manager', 'Admin']:
         abort(403)
 
     booking_id = request.form.get('id')
     new_status = request.form.get('status')
-    booking = Booking.query.get(booking_id)
 
-    if booking:
-        if booking.status == 'pending' and new_status == 'declined':
-            db.session.delete(booking)
-            flash('Booking declined and deleted.', 'info')
-        else:
-            booking.status = new_status
-            flash(f'Booking marked as {new_status}.', 'success')
+    booking = Booking.query.get_or_404(booking_id)
+    
+    if new_status == 'accepted' and current_user.role == 'Barber':
+        booking.status = 'accepted'
+        booking.barber_id = current_user.id  # ✅ Assign barber here
+    elif new_status == 'declined':
+        booking.status = 'declined'
 
-        db.session.commit()
-
+    db.session.commit()
     return redirect(url_for('main.bookings'))
 
 @main.route('/sales')
 @login_required
 def sales():
-    if not current_user.is_admin:
+    if current_user.role not in ['Receptionist', 'Manager', 'Admin']:
         abort(403)
 
     start = request.args.get('start')
@@ -444,33 +456,37 @@ def sales():
     if start and end:
         start_date = datetime.strptime(start, "%Y-%m-%d").date()
         end_date = datetime.strptime(end, "%Y-%m-%d").date()
-        orders = Order.query.filter(Order.timestamp.between(start_date, end_date)).all()
+        orders = Order.query.filter(Order.status == 'paid', Order.timestamp.between(start_date, end_date)).all()
+        bookings = Booking.query.filter(Booking.status == 'accepted', Booking.timestamp.between(start_date, end_date)).all()
     else:
-        orders = Order.query.all()
-        if orders:
-            start_date = min(o.timestamp.date() for o in orders)
-            end_date = max(o.timestamp.date() for o in orders)
+        orders = Order.query.filter(Order.status == 'paid').all()
+        bookings = Booking.query.filter(Booking.status == 'accepted').all()
+        all_timestamps = [o.timestamp.date() for o in orders] + [b.timestamp.date() for b in bookings]
+        if all_timestamps:
+            start_date = min(all_timestamps)
+            end_date = max(all_timestamps)
         else:
             start_date = end_date = date.today()
 
-    # Total summaries
-    total_sales = sum(order.total for order in orders)
-    total_orders = len(orders)
+    total_sales = sum(order.total for order in orders) + sum(booking.price or 0 for booking in bookings)
+    total_orders = len(orders) + len(bookings)
 
-    # Create empty dict for all dates
+    # Full date range
     date_range = [start_date + timedelta(days=i) for i in range((end_date - start_date).days + 1)]
-    revenue_by_date = {d: 0 for d in date_range}
+    revenue_by_date = {d: {'orders': 0, 'bookings': 0} for d in date_range}
 
-    # Aggregate actual revenue
     for order in orders:
-        date_key = order.timestamp.date()
-        if date_key in revenue_by_date:
-            revenue_by_date[date_key] += order.total
+        key = order.timestamp.date()
+        revenue_by_date[key]['orders'] += order.total
+
+    for booking in bookings:
+        key = booking.timestamp.date()
+        revenue_by_date[key]['bookings'] += booking.price or 0
 
     labels = [d.strftime('%Y-%m-%d') for d in date_range]
-    values = [revenue_by_date[d] for d in date_range]
+    order_values = [revenue_by_date[d]['orders'] for d in date_range]
+    booking_values = [revenue_by_date[d]['bookings'] for d in date_range]
 
-    # Best-selling product logic
     top = (
         db.session.query(OrderItem.product_id, func.sum(OrderItem.quantity))
         .group_by(OrderItem.product_id)
@@ -482,18 +498,20 @@ def sales():
     return render_template(
         'reports.html',
         orders=orders,
+        bookings=bookings,
         total_sales=round(total_sales, 2),
         total_orders=total_orders,
         best_seller=best_seller,
         labels=labels,
-        values=values
+        order_values=order_values,
+        booking_values=booking_values
     )
 
 
 @main.route('/roles')
 @login_required
 def roles():
-    if not current_user.is_admin:
+    if current_user.role not in ['Manager', 'Admin']:
         abort(403)
     employees = User.query.filter_by(is_admin=False).all()
     return render_template('employees.html', employees=employees)
@@ -501,7 +519,7 @@ def roles():
 @main.route('/add-employee', methods=['POST'])
 @login_required
 def add_employee():
-    if not current_user.is_admin:
+    if current_user.role not in ['Manager', 'Admin']:
         abort(403)
     full_name = request.form['full_name']
     email = request.form['email']
@@ -523,3 +541,41 @@ def add_employee():
     db.session.commit()
     flash("Employee account created!", "success")
     return redirect(url_for('main.roles'))
+
+@main.route('/verify_order/<order_code>')
+@login_required
+def verify_order(order_code):
+    order = Order.query.filter_by(order_code=order_code).first()
+    if not order or order.status == 'paid':
+        return jsonify({'success': False})
+    
+    return jsonify({'success': True, 'order': {
+        'order_code': order.order_code,
+        'total': round(order.total, 2)
+    }})
+
+@main.route('/payment')
+@login_required
+def payment():
+    if current_user.role not in ['Receptionist','Manager', 'Admin']:
+        abort(403)
+    unpaid_orders = Order.query.filter_by(status='pending').all()
+    return render_template('payments.html', unpaid_orders=unpaid_orders)
+
+
+@main.route('/confirm_payment', methods=['POST'])
+@login_required
+def confirm_payment():
+    if current_user.role not in ['Receptionist','Manager', 'Admin']:
+        abort(403)
+    order_code = request.form.get('order_code')
+    order = Order.query.filter_by(order_code=order_code).first()
+
+    if not order:
+        flash('Invalid order code.', 'error')
+    else:
+        order.status = 'paid'
+        db.session.commit()
+        flash(f'Order {order_code} has been marked as paid.', 'success')
+
+    return redirect(url_for('main.payment'))

@@ -52,6 +52,41 @@
     </table>
   </div>
 
+  <!-- Product Purchases Section -->
+<div class="bg-white p-6 rounded shadow mt-6">
+  <h2 class="text-xl font-semibold mb-4">🧾 All Product Purchases</h2>
+  <table class="w-full table-auto text-left text-sm">
+    <thead class="bg-gray-200">
+      <tr>
+        <th class="p-2">Order Code</th>
+        <th class="p-2">Client</th>
+        <th class="p-2">Total</th>
+        <th class="p-2">Status</th>
+        <th class="p-2">Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for order in orders %}
+      <tr class="border-t">
+        <td class="p-2">{{ order.order_code }}</td>
+        <td class="p-2">{{ order.user.full_name }}</td>
+        <td class="p-2">₱{{ order.total }}</td>
+        <td class="p-2 capitalize">{{ order.status }}</td>
+        <td class="p-2">
+          {% if order.status != 'paid' %}
+            <a href="{{ url_for('main.payment', order_code=order.order_code) }}"
+               class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Manage</a>
+          {% else %}
+            <span class="text-green-600 font-semibold">Paid</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+
   <!-- Add Product & Service Forms -->
    
   <div class="grid md:grid-cols-2 gap-8 mb-12">

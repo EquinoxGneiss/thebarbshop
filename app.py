@@ -18,6 +18,7 @@ with app.app_context():
             contact="0000000000",
             email="admin@barbshop.com",
             password=generate_password_hash("supersecure", method='pbkdf2:sha256'),
+            role="Admin",
             is_admin=True
         )
         db.session.add(superadmin)
