@@ -2,11 +2,13 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
-from datetime import datetime, date
+from datetime import datetime, timedelta, date
 from . import db, login_manager
 from .models import Service, User, Booking, Product, Order, OrderItem
 import os, random, string, barcode
 from barcode.writer import ImageWriter
+from sqlalchemy import func, cast, Date
+from flask import json
 
 main = Blueprint('main', __name__)
 
@@ -370,3 +372,154 @@ def delete_product(product_id):
     flash("Product deleted successfully.", "success")
     return redirect(url_for('main.admin_dashboard'))
 
+@main.route('/bookings')
+@login_required
+def bookings():
+    if not current_user.is_admin:
+        abort(403)
+    bookings = Booking.query.order_by(Booking.timestamp.desc()).all()
+    return render_template('bookings.html', bookings=bookings)
+
+
+@main.route('/api/pending-bookings', methods=['GET'])
+@login_required
+def get_pending_bookings():
+    bookings = Booking.query.filter_by(status='pending').all()
+    return jsonify([
+        {
+            'id': b.id,
+            'client_name': b.client_name,
+            'service': b.service,
+            'datetime': b.datetime.isoformat(),
+            'status': b.status
+        } for b in bookings
+    ])
+
+@main.route('/api/update-booking', methods=['POST'])
+@login_required
+def update_booking():
+    data = request.get_json()
+    booking_id = data.get('id')
+    new_status = data.get('status')
+
+    booking = Booking.query.get(booking_id)
+    if not booking:
+        return jsonify({'message': 'Booking not found'}), 404
+
+    booking.status = new_status
+    db.session.commit()
+    return jsonify({'message': f'Booking {new_status}'}), 200
+
+@main.route('/update-booking-status', methods=['POST'])
+@login_required
+def update_booking_status():
+    if not current_user.is_admin:
+        abort(403)
+
+    booking_id = request.form.get('id')
+    new_status = request.form.get('status')
+    booking = Booking.query.get(booking_id)
+
+    if booking:
+        if booking.status == 'pending' and new_status == 'declined':
+            db.session.delete(booking)
+            flash('Booking declined and deleted.', 'info')
+        else:
+            booking.status = new_status
+            flash(f'Booking marked as {new_status}.', 'success')
+
+        db.session.commit()
+
+    return redirect(url_for('main.bookings'))
+
+@main.route('/sales')
+@login_required
+def sales():
+    if not current_user.is_admin:
+        abort(403)
+
+    start = request.args.get('start')
+    end = request.args.get('end')
+
+    if start and end:
+        start_date = datetime.strptime(start, "%Y-%m-%d").date()
+        end_date = datetime.strptime(end, "%Y-%m-%d").date()
+        orders = Order.query.filter(Order.timestamp.between(start_date, end_date)).all()
+    else:
+        orders = Order.query.all()
+        if orders:
+            start_date = min(o.timestamp.date() for o in orders)
+            end_date = max(o.timestamp.date() for o in orders)
+        else:
+            start_date = end_date = date.today()
+
+    # Total summaries
+    total_sales = sum(order.total for order in orders)
+    total_orders = len(orders)
+
+    # Create empty dict for all dates
+    date_range = [start_date + timedelta(days=i) for i in range((end_date - start_date).days + 1)]
+    revenue_by_date = {d: 0 for d in date_range}
+
+    # Aggregate actual revenue
+    for order in orders:
+        date_key = order.timestamp.date()
+        if date_key in revenue_by_date:
+            revenue_by_date[date_key] += order.total
+
+    labels = [d.strftime('%Y-%m-%d') for d in date_range]
+    values = [revenue_by_date[d] for d in date_range]
+
+    # Best-selling product logic
+    top = (
+        db.session.query(OrderItem.product_id, func.sum(OrderItem.quantity))
+        .group_by(OrderItem.product_id)
+        .order_by(func.sum(OrderItem.quantity).desc())
+        .first()
+    )
+    best_seller = Product.query.get(top[0]).name if top else None
+
+    return render_template(
+        'reports.html',
+        orders=orders,
+        total_sales=round(total_sales, 2),
+        total_orders=total_orders,
+        best_seller=best_seller,
+        labels=labels,
+        values=values
+    )
+
+
+@main.route('/roles')
+@login_required
+def roles():
+    if not current_user.is_admin:
+        abort(403)
+    employees = User.query.filter_by(is_admin=False).all()
+    return render_template('employees.html', employees=employees)
+
+@main.route('/add-employee', methods=['POST'])
+@login_required
+def add_employee():
+    if not current_user.is_admin:
+        abort(403)
+    full_name = request.form['full_name']
+    email = request.form['email']
+    password = request.form['password']
+    role = request.form['role']
+
+    if User.query.filter_by(email=email).first():
+        flash("Email already exists.", "danger")
+        return redirect(url_for('main.roles'))
+
+    new_user = User(
+        full_name=full_name,
+        email=email,
+        password=generate_password_hash(password, method='pbkdf2:sha256'),
+        role=role,
+        is_admin=False
+    )
+    db.session.add(new_user)
+    db.session.commit()
+    flash("Employee account created!", "success")
+    return redirect(url_for('main.roles'))

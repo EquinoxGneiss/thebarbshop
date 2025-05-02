@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sales Reports - The Barbshop</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100 p-8">
+  {% include 'navbar.html' %}
+
+  <h1 class="text-3xl font-bold text-gray-800 mb-6">📊 Sales Reports</h1>
+
+  <!-- Date Filter -->
+  <form method="GET" class="flex flex-wrap gap-4 mb-6 items-end">
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Start Date</label>
+      <input type="date" name="start" class="border p-2 rounded w-full" value="{{ request.args.get('start', '') }}" required />
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700">End Date</label>
+      <input type="date" name="end" class="border p-2 rounded w-full" value="{{ request.args.get('end', '') }}" required />
+    </div>
+    <div>
+      <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+        Filter
+      </button>
+    </div>
+  </form>
+
+  <!-- Summary Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="bg-white p-6 rounded shadow text-center">
+      <h2 class="text-lg text-gray-600 font-semibold">Total Sales</h2>
+      <p class="text-2xl font-bold text-green-600">₱{{ total_sales }}</p>
+    </div>
+    <div class="bg-white p-6 rounded shadow text-center">
+      <h2 class="text-lg text-gray-600 font-semibold">Total Orders</h2>
+      <p class="text-2xl font-bold text-indigo-600">{{ total_orders }}</p>
+    </div>
+    <div class="bg-white p-6 rounded shadow text-center">
+      <h2 class="text-lg text-gray-600 font-semibold">Best Seller</h2>
+      <p class="text-xl font-medium text-gray-900">{{ best_seller or '—' }}</p>
+    </div>
+  </div>
+
+  <!-- Revenue Chart -->
+  <div class="bg-white p-6 rounded shadow mb-8">
+    <h2 class="text-xl font-semibold mb-4">📈 Revenue Over Time</h2>
+    <canvas id="salesChart" height="120"></canvas>
+  </div>
+
+  <!-- Order Table -->
+  <div class="bg-white p-6 rounded shadow">
+    <h2 class="text-xl font-semibold mb-4">🧾 Order History</h2>
+    <table class="w-full table-auto text-left text-sm">
+      <thead class="bg-gray-200">
+        <tr>
+          <th class="p-2">Date</th>
+          <th class="p-2">Order Code</th>
+          <th class="p-2">Client</th>
+          <th class="p-2">Amount</th>
+          <th class="p-2">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for order in orders %}
+        <tr class="border-t">
+          <td class="p-2">{{ order.timestamp.strftime('%Y-%m-%d') }}</td>
+          <td class="p-2">{{ order.order_code }}</td>
+          <td class="p-2">{{ order.user.full_name }}</td>
+          <td class="p-2">₱{{ "%.2f"|format(order.total) }}</td>
+          <td class="p-2">{{ order.status }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Chart.js Script -->
+  <!-- Inject labels and values as raw JSON -->
+<script id="labels-json" type="application/json">{{ labels | tojson }}</script>
+<script id="values-json" type="application/json">{{ values | tojson }}</script>
+
+<script>
+  const labels = JSON.parse(document.getElementById('labels-json').textContent);
+  const values = JSON.parse(document.getElementById('values-json').textContent);
+
+  const ctx = document.getElementById('salesChart').getContext('2d');
+  const salesChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Daily Revenue (₱)',
+        data: values,
+        borderColor: 'rgb(59, 130, 246)',
+        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+        fill: true,
+        tension: 0.3
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: true },
+        tooltip: { enabled: true }
+      },
+      scales: {
+        y: {
+          beginAtZero: true
+        }
+      }
+    }
+  });
+</script>
+
+
+</body>
+</html>
