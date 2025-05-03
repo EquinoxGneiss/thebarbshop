@@ -32,7 +32,7 @@
           <td class="p-2">{{ booking.user.full_name }}</td>
           <td class="p-2">{{ booking.service }}</td>
           <td class="p-2">₱{{ '%.2f' | format(booking.price or 0) }}</td>
-          <td class="p-2">{{ booking.timestamp.strftime('%Y-%m-%d %I:%M %p') }}</td>
+          <td class="p-2">{{ booking.timestamp | to_ph_time }}          </td>
           <td class="p-2 capitalize">{{ booking.status }}</td>
           <td class="p-2">
             {% if booking.barber %}

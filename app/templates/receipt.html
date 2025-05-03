@@ -22,7 +22,7 @@
   <div id="receipt-area" class="bg-white p-6 rounded shadow max-w-lg mx-auto">
     <h1 class="text-2xl font-bold mb-4">🧾 Receipt</h1>
     <p><strong>Order Code:</strong> {{ order.order_code }}</p>
-    <p><strong>Date:</strong> {{ order.timestamp.strftime('%Y-%m-%d %I:%M %p') }}</p>
+    <p><strong>Date:</strong> {{ order.timestamp | to_ph_time  }}</p>
     <hr class="my-4">
 
     <ul class="space-y-2">

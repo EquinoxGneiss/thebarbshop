@@ -37,7 +37,7 @@
           <td class="p-2">{{ booking.user.full_name }}</td>
           <td class="p-2">{{ booking.service }}</td>
           <td class="p-2">
-            {{ booking.timestamp.strftime('%Y-%m-%d %I:%M %p') }}
+            {{ booking.timestamp | to_ph_time }}
             <span class="ml-2 px-2 py-1 rounded text-xs font-semibold 
               {% if booking.status == 'accepted' %} bg-green-100 text-green-700
               {% elif booking.status == 'pending' %} bg-yellow-100 text-yellow-700
