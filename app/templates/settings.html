@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Settings</title>
+  <script src="https://cdn.tailwindcss.com"></script> 
+</head>
+{% include 'navbar.html' %}
+<body class="{{ 'bg-white text-black' }} min-h-screen p-8">
+
+  <div class="max-w-xl mx-auto bg-white dark:bg-white p-6 rounded shadow">
+    <h1 class="text-2xl font-bold mb-4">⚙️ Application Settings</h1>
+
+    <form method="POST">
+      <div class="mb-4">
+        <label class="block font-medium mb-1">Opening Time</label>
+        <input type="time" name="opening_time" value="{{ opening_time }}" class="w-full p-2 border rounded">
+      </div>
+
+      <div class="mb-4">
+        <label class="block font-medium mb-1">Closing Time</label>
+        <input type="time" name="closing_time" value="{{ closing_time }}" class="w-full p-2 border rounded">
+      </div>
+
+   <!--   <div class="mb-6">
+        <label class="inline-flex items-center">
+          <input type="checkbox" name="dark_mode" {% if dark_mode %}checked{% endif %} class="mr-2">
+          Enable Dark Mode
+        </label>
+      </div>-->
+
+      <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Save Settings</button>
+    </form>
+  </div>
+</body>
+</html>

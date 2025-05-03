@@ -4,7 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta, date
 from . import db, login_manager
-from .models import Service, User, Booking, Product, Order, OrderItem
+from .models import Service, User, Booking, Product, Order, OrderItem, Setting
 import os, random, string, barcode
 import qrcode
 import io
@@ -139,7 +139,17 @@ def book():
     if service_param:
         selected_service = Service.query.filter_by(name=service_param).first()
 
-    return render_template('book.html', selected_service=selected_service, today=date.today())
+    # Get settings
+    opening_time = Setting.query.filter_by(key='opening_time').first()
+    closing_time = Setting.query.filter_by(key='closing_time').first()
+
+    return render_template(
+        'book.html',
+        selected_service=selected_service,
+        today=date.today(),
+        opening_time=opening_time.value if opening_time else "08:00",
+        closing_time=closing_time.value if closing_time else "18:00"
+    )
 
 # === Receipt View ===
 @main.route('/receipt/<order_code>')
@@ -670,3 +680,48 @@ def check_conflict():
 
     conflict = Booking.query.filter_by(date=date, time=time).first()
     return jsonify({'conflict': bool(conflict)})
+
+def get_setting(key):
+    setting = Setting.query.filter_by(key=key).first()
+    return setting.value if setting else None
+
+def update_setting(key, value):
+    setting = Setting.query.filter_by(key=key).first()
+    if setting:
+        setting.value = value
+    else:
+        setting = Setting(key=key, value=value)
+        db.session.add(setting)
+    db.session.commit()
+
+@main.route('/settings', methods=['GET', 'POST'])
+@login_required
+def settings():
+    if current_user.role not in ['Admin', 'Manager']:
+        abort(403)
+
+    if request.method == 'POST':
+        update_setting('opening_time', request.form.get('opening_time'))
+        update_setting('closing_time', request.form.get('closing_time'))
+        update_setting('dark_mode', 'true' if request.form.get('dark_mode') else 'false')
+        flash("Settings updated successfully!", "success")
+        return redirect(url_for('main.settings'))
+
+    return render_template(
+        'settings.html',
+        opening_time=get_setting('opening_time') or '09:00',
+        closing_time=get_setting('closing_time') or '19:00',
+        dark_mode=get_setting('dark_mode') == 'true'
+    )
+
+@main.route('/check_availability')
+def check_availability():
+    date_str = request.args.get('date')
+    time_str = request.args.get('time')
+
+    if not date_str or not time_str:
+        return jsonify({"error": "Missing date or time"}), 400
+
+    existing = Booking.query.filter_by(date=date_str, time=time_str).first()
+
+    return jsonify({"conflict": existing is not None})

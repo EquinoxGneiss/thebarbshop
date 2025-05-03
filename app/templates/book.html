@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Book a Service - The Barbshop</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
@@ -41,9 +41,19 @@
       <input type="date" id="date" name="date" class="w-full mb-4 p-2 border rounded" required>
 
       <label class="block mb-2 font-semibold">Time</label>
-      <input type="time" id="time" name="time" class="w-full mb-4 p-2 border rounded" required>
+      <select id="time" name="time" class="w-full mb-4 p-2 border rounded" required>
+        <option value="">Select time</option>
+        {% for hour in range(0, 24) %}
+          {% for minute in [0, 15, 30, 45] %}
+            {% set time_value = "%02d:%02d" % (hour, minute) %}
+            {% if opening_time <= time_value <= closing_time %}
+              <option value="{{ time_value }}">{{ time_value }}</option>
+            {% endif %}
+          {% endfor %}
+        {% endfor %}
+      </select>
 
-      <button id="confirm-btn" type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+      <button id="confirmBtn" type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
         Confirm Booking
       </button>
     </form>
@@ -55,72 +65,56 @@
       <p><strong>Price:</strong> ₱{{ '%.2f' | format(selected_service.price) if selected_service else '–' }}</p>
       <p><strong>Date:</strong> <span id="summary-date">–</span></p>
       <p><strong>Time:</strong> <span id="summary-time">–</span></p>
-      <p><strong>Availability:</strong> <span id="availability" class="text-green-600">Available</span></p>
+      <p><strong>Availability:</strong> <span id="availability" class="text-green-600">Check time</span></p>
     </div>
-
   </div>
 
   <a href="{{ url_for('main.base') }}" class="mt-10 text-blue-500 hover:underline">← Back to Dashboard</a>
 
   <script>
     const dateInput = document.getElementById("date");
-    const timeInput = document.getElementById("time");
-    const confirmButton = document.getElementById("confirm-btn");
-    const availabilitySpan = document.getElementById("availability");
+    const timeSelect = document.getElementById("time");
     const today = new Date().toISOString().split("T")[0];
+    const confirmBtn = document.getElementById("confirmBtn");
+    const availabilityText = document.getElementById("availability");
+
     dateInput.min = today;
 
-    function updateTimeLimit() {
-      const selectedDate = dateInput.value;
-      const now = new Date();
-
-      if (selectedDate === today) {
-        const hours = now.getHours().toString().padStart(2, '0');
-        const minutes = now.getMinutes().toString().padStart(2, '0');
-        timeInput.min = `${hours}:${minutes}`;
-      } else {
-        timeInput.min = "00:00";
-      }
-    }
-
     function updateSummary() {
-      document.getElementById('summary-date').textContent = dateInput.value || '–';
-      document.getElementById('summary-time').textContent = timeInput.value || '–';
+      document.getElementById("summary-date").textContent = dateInput.value || '–';
+      document.getElementById("summary-time").textContent = timeSelect.value || '–';
+    }
 
-      if (dateInput.value && timeInput.value) {
-        fetch('/check_conflict', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ date: dateInput.value, time: timeInput.value })
-        })
-        .then(res => res.json())
-        .then(data => {
-          if (data.conflict) {
-            availabilitySpan.textContent = "Unavailable";
-            availabilitySpan.className = "text-red-600";
-            confirmButton.disabled = true;
-            confirmButton.classList.add("opacity-50", "cursor-not-allowed");
-          } else {
-            availabilitySpan.textContent = "Available";
-            availabilitySpan.className = "text-green-600";
-            confirmButton.disabled = false;
-            confirmButton.classList.remove("opacity-50", "cursor-not-allowed");
-          }
-        });
+    async function checkAvailability() {
+      const date = dateInput.value;
+      const time = timeSelect.value;
+      if (!date || !time) return;
+
+      const response = await fetch(`/check_availability?date=${date}&time=${time}`);
+      const data = await response.json();
+
+      if (data.available) {
+        availabilityText.textContent = "Available";
+        availabilityText.className = "text-green-600";
+        confirmBtn.disabled = false;
+      } else {
+        availabilityText.textContent = "Unavailable";
+        availabilityText.className = "text-red-600";
+        confirmBtn.disabled = true;
       }
     }
 
-    dateInput.addEventListener('change', () => {
-      updateTimeLimit();
+    dateInput.addEventListener("change", () => {
       updateSummary();
+      checkAvailability();
     });
 
-    timeInput.addEventListener('change', updateSummary);
+    timeSelect.addEventListener("change", () => {
+      updateSummary();
+      checkAvailability();
+    });
 
-    updateTimeLimit();
-    updateSummary();
-
-    // Auto-dismiss flash after 5 seconds
+    // Auto-dismiss flash messages
     setTimeout(() => {
       document.querySelectorAll('.flash-message').forEach(el => el.remove());
     }, 5000);
