@@ -70,7 +70,7 @@
       <tbody>
         {% for order in orders %}
 <tr class="border-t">
-  <td class="p-2">{{ order.timestamp.replace(tzinfo=pytz.utc).astimezone(pytz.timezone('Asia/Manila')).strftime('%Y-%m-%d %I:%M %p')}}</td>
+  <td class="p-2">{{ order.timestamp | to_ph_time }}</td>
   <td class="p-2">{{ order.order_code }}</td>
   <td class="p-2">{{ order.user.full_name }}</td>
   <td class="p-2">₱{{ "%.2f"|format(order.total) }}</td>
@@ -79,7 +79,7 @@
 {% endfor %}
 {% for booking in bookings %}
 <tr class="border-t">
-  <td class="p-2">{{ booking.timestamp.replace(tzinfo=pytz.utc).astimezone(pytz.timezone('Asia/Manila')).strftime('%Y-%m-%d %I:%M %p') }}  </td>
+  <td class="p-2">{{ booking.timestamp | to_ph_time }}</td>
   <td class="p-2">{{ booking.order_code }}</td>
   <td class="p-2">{{ booking.user.full_name }}</td>
   <td class="p-2">₱{{ "%.2f"|format(booking.price or 0) }}</td>
