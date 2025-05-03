@@ -101,40 +101,34 @@ def book():
         time = request.form.get('time')
 
         if not all([service_name, date_str, time]):
-            flash("Incomplete booking details.", "error")
+            flash("Missing booking details.", "error")
             return redirect(url_for('main.book', service=service_name))
 
-        selected_service = Service.query.filter_by(name=service_name).first()
-        if not selected_service:
-            flash("Selected service not found.", "error")
+        service = Service.query.filter_by(name=service_name).first()
+        if not service:
+            flash("Service not found.", "error")
             return redirect(url_for('main.book'))
 
-        try:
-            timestamp = datetime.strptime(f"{date_str} {time}", "%Y-%m-%d %H:%M")
-        except:
-            flash("Invalid date/time format.", "error")
-            return redirect(url_for('main.book', service=service_name))
+        timestamp = datetime.strptime(f"{date_str} {time}", "%Y-%m-%d %H:%M")
 
-        # Check for booking conflicts
+        # Check for conflict
         existing = Booking.query.filter_by(date=date_str, time=time).first()
         if existing:
-            flash("This time slot is already booked.", "error")
-            return render_template('book.html', selected_service=selected_service, today=date.today())
+            flash("Time slot already booked.", "error")
+            return redirect(url_for('main.book', service=service_name))
 
-        # Generate unique order code
         order_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
-
-        # Save booking (now with price)
-        new_booking = Booking(
+        booking = Booking(
             user_id=current_user.id,
-            service=selected_service.name,
+            service=service.name,
             date=date_str,
             time=time,
+            timestamp=datetime.utcnow(),
             order_code=order_code,
             status='pending',
-            price=selected_service.price  # ✅ Store the service price
+            price=service.price
         )
-        db.session.add(new_booking)
+        db.session.add(booking)
         db.session.commit()
 
         return redirect(url_for('main.receipt', order_code=order_code))
@@ -146,8 +140,6 @@ def book():
         selected_service = Service.query.filter_by(name=service_param).first()
 
     return render_template('book.html', selected_service=selected_service, today=date.today())
-
-
 
 # === Receipt View ===
 @main.route('/receipt/<order_code>')
