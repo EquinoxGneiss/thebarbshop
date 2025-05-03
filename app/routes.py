@@ -631,3 +631,13 @@ def confirm_payment():
         flash(f'Order {order_code} has been marked as paid.', 'success')
 
     return redirect(url_for('main.payment'))
+
+@main.route('/check_conflict', methods=['POST'])
+@login_required
+def check_conflict():
+    data = request.get_json()
+    date = data.get('date')
+    time = data.get('time')
+
+    conflict = Booking.query.filter_by(date=date, time=time).first()
+    return jsonify({'conflict': bool(conflict)})
