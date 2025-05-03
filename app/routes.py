@@ -11,7 +11,7 @@ import io
 import base64
 from flask import render_template
 from sqlalchemy import func, cast, Date
-from flask import json
+from flask import json, request
 import pandas as pd
 from io import BytesIO
 from flask import send_file
@@ -384,18 +384,47 @@ def delete_product(product_id):
     flash("Product deleted successfully.", "success")
     return redirect(url_for('main.admin_dashboard'))
 
+
+
 @main.route('/bookings')
 @login_required
 def bookings():
     if current_user.role not in ['Barber', 'Manager', 'Admin']:
         abort(403)
-    manila = timezone('Asia/Manila')
-    bookings = Booking.query.order_by(Booking.timestamp.desc()).all()
 
-    # Convert timestamp to Manila time for display
-    for b in bookings:
+    manila = timezone('Asia/Manila')
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+
+    bookings_query = Booking.query.order_by(Booking.timestamp.desc())
+    paginated = bookings_query.paginate(page=page, per_page=per_page)
+
+    # Apply Manila timezone to each booking's timestamp
+    for b in paginated.items:
         b.local_time = b.timestamp.astimezone(manila).strftime('%Y-%m-%d %I:%M %p')
-    return render_template('bookings.html', bookings=bookings)
+
+    return render_template('bookings.html', bookings=paginated)
+
+
+# BULK DELETE ROUTE
+@main.route('/delete_bookings', methods=['POST'])
+@login_required
+def delete_bookings():
+    if current_user.role not in ['Admin', 'Manager']:
+        abort(403)
+
+    ids = request.form.getlist('booking_ids')
+    if ids:
+        for bid in ids:
+            booking = Booking.query.get(int(bid))
+            if booking:
+                db.session.delete(booking)
+        db.session.commit()
+        flash(f"{len(ids)} booking(s) deleted.", "success")
+    else:
+        flash("No bookings selected for deletion.", "error")
+
+    return redirect(url_for('main.bookings'))
 
 
 @main.route('/api/pending-bookings', methods=['GET'])
