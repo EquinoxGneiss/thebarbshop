@@ -1,0 +1,17 @@
+<!-- navbar.html -->
+<nav class="bg-white shadow mb-8 p-4 rounded flex justify-between items-center">
+    <div class="text-xl font-semibold text-gray-800">
+      The Barbshop Admin
+    </div>
+    <div class="space-x-4">
+      <a href="{{ url_for('main.admin_dashboard') }}" class="text-gray-700 hover:text-blue-600 font-medium">Manage</a>
+      <a href="{{ url_for('main.roles') }}" class="text-gray-700 hover:text-blue-600 font-medium">Employees</a>
+      <a href="{{ url_for('main.sales') }}" class="text-gray-700 hover:text-blue-600 font-medium">Reports</a>
+      <a href="{{ url_for('main.payment') }}" class="text-gray-700 hover:text-blue-600 font-medium">QR Scan</a>
+      <a href="{{ url_for('main.profile') }}" class="text-gray-700 hover:text-blue-600 font-medium">Profile</a>
+      <a href="{{ url_for('main.logout') }}" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+        Logout
+      </a>
+    </div>
+  </nav>
+  

@@ -14,29 +14,30 @@
 </head>
 <body class="bg-gray-100 snap-y snap-mandatory overflow-y-scroll h-screen" >
 
-  <!-- Header -->
+  <!-- Header 
   <header class="bg-white shadow sticky top-0 z-50">
     <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-      <h1 class="text-xl font-semibold text-gray-800">The Barbshop</h1>
+      <h1 class="text-xl font-semibold text-gray-800"><a href="{{ url_for('main.admin_dashboard') }}">The Barbshop</a> </h1>
       <div class="flex items-center space-x-4">
-        {% if current_user.is_admin %}
-        <a href="{{ url_for('main.admin_dashboard') }}" class="bg-indigo-500 text-white px-4 py-2 rounded hover:bg-indigo-600">
-          Admin Panel
-        </a>
+        {% if current_user.role %}
+        <a href="{{ url_for('main.admin_dashboard') }}" class="text-gray-700 hover:text-blue-600 font-medium">Admin</a>
         {% endif %}
+        <a href="{{ url_for('main.profile') }}" class="text-gray-700 hover:text-blue-600 font-medium">Profile</a>
         <a href="{{ url_for('main.logout') }}" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
           Logout
         </a>
-        <a href="{{ url_for('main.profile') }}" class="text-sm text-gray-700 hover:underline">Profile</a>
       </div>
     </div>
-  </header>
-  
+  </header>  -->
+  {% include 'clientnav.html' %}
 
   <!-- Welcome Section -->
-  <section class="min-h-screen flex flex-col justify-center items-center bg-white snap-start px-4">
-    <h1 class="text-4xl font-bold mb-4 text-center text-gray-800">Welcome to The Barbshop</h1>
-    <p class="text-lg text-gray-600 text-center max-w-xl mb-6">
+  <section 
+    class="min-h-screen flex flex-col justify-center items-center bg-white snap-start px-4"
+    style="background-image: url('/static/uploads/background/barbershop.jpg');"
+  >
+    <h1 class="text-4xl font-bold mb-4 text-center text-white">Welcome to The Barbshop</h1>
+    <p class="text-lg text-white text-center max-w-xl mb-6">
       Choose a fresh new look or shop our exclusive grooming products.
     </p>
 
@@ -50,17 +51,36 @@
     </div>
   </section>
 
-  <!-- Services Section (clickable cards) -->
-  <!-- Services Section (clickable cards) -->
-<section id="services" class="min-h-screen px-6 py-12 bg-gray-50 snap-start">
-    <h2 class="text-3xl font-bold text-center mb-8">Our Services</h2>
-    <div class="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+  <section 
+    class="min-h-screen flex flex-col justify-center items-center bg-white snap-start px-4"
+    style="background-image: url('/static/uploads/background/background2.png');background-size: cover; background-position: center; background-repeat: no-repeat;"
+    >
+    <h1 class="text-4xl font-bold mb-4 text-center text-gray-800">About Us</h1>
+    <p class="text-lg mix-blend-difference text-white text-center max-w-xl mb-6">
+      The Barbshop isn’t just a place to get a haircut — it’s where style, tradition, and community come together. Founded on the belief that grooming should be an experience, not just a service, The Barbshop blends classic barbering techniques with modern trends in a welcoming and laid-back atmosphere.
+
+Our skilled barbers are passionate about their craft and committed to helping every client look and feel their best. Whether you're here for a precision cut, a fresh fade, a beard trim, or a hot towel shave, you’ll leave looking sharp and feeling confident.
+
+More than a barbershop, we're a hub for conversation, culture, and connection. With a vibe that’s as cool as your favorite playlist and service that feels like catching up with an old friend, The Barbshop is where style meets substance.
+
+Come for the cut. Stay for the culture.
+    </p>
+  </section>
+
+
+  <!-- Services Section -->
+<section id="services" 
+  class="min-h-screen px-6 py-12 bg-gray-50 snap-start"
+  style="background-image: url('/static/uploads/background/background1.png');"
+  >
+    <h2 class="text-3xl font-bold text-center mb-8 text-white">Our Services</h2>
+    <div class="grid md:grid-cols-5 gap-6 max-w-6xl mx-auto">
   
       {% for service in services %}
       <a href="{{ url_for('main.book', service=service.name) }}" class="block p-6 bg-white rounded-lg shadow hover:shadow-md transition duration-300">
         {% if service.image %}
           <img src="{{ url_for('static', filename='uploads/services/' + service.image) }}" alt="{{ service.name }}"
-               class="w-full h-45 object-cover rounded mb-4">
+               class="w-full h-40 object-cover rounded mb-4">
         {% endif %}
         <h3 class="text-xl font-semibold">{{ service.name }}</h3>
         <p class="text-gray-600 mt-2">{{ service.description }}</p>
@@ -73,9 +93,12 @@
   
 
   <!-- Products Section with cart -->
-<section id="products" class="min-h-screen px-6 py-12 bg-white snap-start">
-    <h2 class="text-3xl font-bold text-center mb-8">Shop Our Products</h2>
-    <div class="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+<section id="products" 
+  class="min-h-screen px-6 py-12 bg-white snap-start"
+  style="background-image: url('/static/uploads/background/background3.png');"
+>
+    <h2 class="text-3xl font-bold text-center mb-8 text-white">Shop Our Products</h2>
+    <div class="grid md:grid-cols-5 gap-6 max-w-6xl mx-auto">
       {% for product in products %}
       <div class="p-6 bg-gray-100 rounded-lg shadow hover:shadow-md">
         {% if product.image %}
@@ -117,7 +140,11 @@
       document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
     }
 
-    let cart = {};
+    let cart = JSON.parse(localStorage.getItem('cart')) ||{};
+
+    function saveCart() {
+  localStorage.setItem('cart', JSON.stringify(cart));
+}
 
 function addToCart(id, name, price) {
   const qty = parseInt(document.getElementById('qty-' + id).value);
@@ -136,10 +163,27 @@ function renderCart() {
     const item = cart[id];
     const subtotal = item.price * item.qty;
     sum += subtotal;
-    list.innerHTML += `<li>${item.name} x${item.qty} - ₱${subtotal.toFixed(2)}</li>`;
+    const li = document.createElement('li');
+    li.className = "flex justify-between items-center border-b pb-2";
+    li.innerHTML = `
+      <div>
+        <p class="font-semibold">${item.name}</p>
+        <p class="text-xs">Qty: ${item.qty} × ₱${item.price.toFixed(2)} = ₱${subtotal.toFixed(2)}</p>
+      </div>
+      <button class="text-red-500 hover:text-red-700 text-sm" onclick="removeFromCart('${id}')">Remove</button>
+    `;
+    list.appendChild(li);
   }
   total.innerText = sum.toFixed(2);
+  saveCart();
 }
+
+function removeFromCart(id) {
+  delete cart[id];
+  renderCart();
+  saveCart();
+}
+
 
 function checkout() {
   if (Object.keys(cart).length === 0) {

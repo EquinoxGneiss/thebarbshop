@@ -5,9 +5,12 @@
   <title>Sign Up - The Barbshop</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 flex items-center justify-center min-h-screen">
-  <div class="bg-white p-8 rounded-2xl shadow-md w-full max-w-md">
-    <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">Create an Account</h2>
+<body 
+  class="bg-gray-100 flex items-center justify-center min-h-screen"
+  style="background-image: url('/static/uploads/background/barbershop.jpg');"
+  >
+  <div class="bg-transparent p-8 rounded-2xl shadow-md w-full max-w-md">
+    <h2 class="text-2xl font-bold mb-6 text-center text-white">Create an Account</h2>
 
     <form method="POST" action="{{ url_for('main.signup') }}" class="space-y-4">
       {% if error %}
@@ -28,7 +31,7 @@
       </button>
     </form>
 
-    <p class="mt-6 text-sm text-center text-gray-600">
+    <p class="mt-6 text-sm text-center text-white">
       Already have an account?
       <a href="{{ url_for('main.login') }}" class="text-blue-500 hover:underline">Log in</a>
     </p>

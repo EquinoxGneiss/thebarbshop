@@ -1,0 +1,13 @@
+<nav class="fixed top-0 left-0 w-full p-4 z-50 flex justify-between items-center mix-blend-difference text-white">
+    <div class="text-xl font-semibold">
+      <a href="{{ url_for('main.admin_dashboard') }}">The Barbshop</a>
+    </div>
+    <div class="flex items-center space-x-4">
+      {% if current_user.role %}
+        <a href="{{ url_for('main.admin_dashboard') }}">Admin</a>
+      {% endif %}
+      <a href="{{ url_for('main.profile') }}">Profile</a>
+      <a href="{{ url_for('main.logout') }}" class="bg-red-500 text-white px-4 py-2 rounded">Logout</a>
+    </div>
+  </nav>
+  
